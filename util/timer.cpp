@@ -138,6 +138,16 @@ void sleep_until_nsecs(int64_t timepoint)
 		_mm_pause();
 #endif
 	}
+#elif defined(__APPLE__)
+	// macOS has no clock_nanosleep: sleep the remaining CLOCK_MONOTONIC time with nanosleep, which
+	// is relative, until the timepoint has passed.
+	for (int64_t d = timepoint - get_current_time_nsecs(); d > 0; d = timepoint - get_current_time_nsecs())
+	{
+		struct timespec ts = {};
+		ts.tv_sec = d / 1000000000ll;
+		ts.tv_nsec = d % 1000000000ll;
+		nanosleep(&ts, nullptr);
+	}
 #else
 	constexpr auto timebase = CLOCK_MONOTONIC;
 	struct timespec ts = {};
